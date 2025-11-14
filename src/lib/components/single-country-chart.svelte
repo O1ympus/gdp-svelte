@@ -21,17 +21,7 @@
 	
 	const countryData = $derived(data.dataset);
 	
-	let chartData = $state<Array<{ date: Date; value: number }>>([]);
-	let maxValue = $state(0);
-	let yScale = $state<any>(null);
-	
-	const chartColor = "#3b82f6";
-	
-	const chartConfig = {
-		value: { label: data.type, color: chartColor }
-	} satisfies Chart.ChartConfig;
-	
-	$effect(() => {
+	const chartData = $derived.by(() => {
 		const currentData = countryData;
 		const entries = Object.entries(currentData);
 		const dataPoints: Array<{ date: Date; value: number }> = [];
@@ -51,23 +41,33 @@
 			}
 		}
 		
-		chartData = dataPoints;
-		
-		if (dataPoints.length > 0) {
-			let currentMax = 0;
-			for (let i = 0; i < dataPoints.length; i++) {
-				if (dataPoints[i].value > currentMax) {
-					currentMax = dataPoints[i].value;
-				}
-			}
-			maxValue = currentMax;
-		} else {
-			maxValue = 0;
+		return dataPoints;
+	});
+	
+	const maxValue = $derived.by(() => {
+		if (chartData.length === 0) {
+			return 0;
 		}
 		
-		const topValue = maxValue * 1.1;
-		yScale = scaleLinear().domain([0, topValue]);
+		let currentMax = 0;
+		for (let i = 0; i < chartData.length; i++) {
+			if (chartData[i].value > currentMax) {
+				currentMax = chartData[i].value;
+			}
+		}
+		return currentMax;
 	});
+	
+	const yScale = $derived.by(() => {
+		const topValue = maxValue * 1.1;
+		return scaleLinear().domain([0, topValue]);
+	});
+	
+	const chartColor = "#3b82f6";
+	
+	const chartConfig = {
+		value: { label: data.type, color: chartColor }
+	} satisfies Chart.ChartConfig;
 </script>
 
 {#if countryData}
@@ -77,64 +77,70 @@
 			<CardDescription>{data.type} over time</CardDescription>
 		</CardHeader>
 		<CardContent>
-			<Chart.Container config={chartConfig}>
-				<AreaChart
-					data={chartData}
-					x="date"
-					xScale={scaleUtc()}
-					yScale={yScale}
-					yPadding={[20, 40]}
-					series={[
-					{
-						key: 'value',
-						label: chartConfig.value.label,
-						color: chartConfig.value.color
-					}
-				]}
-					props={{
-					area: {
-						curve: curveNatural,
-						'fill-opacity': 0.4,
-						line: { class: 'stroke-1' },
-						motion: 'tween'
-					},
-					xAxis: {
-						format: (v: Date) => v.getFullYear().toString()
-					},
-					yAxis: {
-						format: (v: number) => {
-							if (v < 0) return '';
-							if (v >= 1000000000) return (v / 1000000000).toFixed(0) + 'B';
-							if (v >= 1000000) return (v / 1000000).toFixed(0) + 'M';
-							if (v >= 1000) return (v / 1000).toFixed(0) + 'K';
-							return v.toLocaleString();
+			{#if chartData.length > 0 && yScale}
+				<Chart.Container config={chartConfig}>
+					<AreaChart
+						data={chartData}
+						x="date"
+						xScale={scaleUtc()}
+						yScale={yScale}
+						yPadding={[20, 40]}
+						series={[
+						{
+							key: 'value',
+							label: chartConfig.value.label,
+							color: chartConfig.value.color
 						}
-					}
-				}}
-				>
-					{#snippet tooltip()}
-						<Chart.Tooltip
-							labelFormatter={(v: Date) => v.getFullYear().toString()}
-							indicator="dot"
-						/>
-					{/snippet}
-					{#snippet marks({ series, getAreaProps })}
-						{#each series as s, i (s.key)}
-							<LinearGradient
-								stops={[
-									s.color ?? "",
-									"color-mix(in srgb, " + s.color + " 15%, transparent)",
-								]}
-								vertical
-							>
-								{#snippet children({ gradient })}
-									<Area {...getAreaProps(s, i)} fill={gradient} />
-								{/snippet}
-							</LinearGradient>
-						{/each}
-					{/snippet}
-				</AreaChart>
-			</Chart.Container>
+					]}
+						props={{
+						area: {
+							curve: curveNatural,
+							'fill-opacity': 0.4,
+							line: { class: 'stroke-1' },
+							motion: 'tween'
+						},
+						xAxis: {
+							format: (v: Date) => v.getFullYear().toString()
+						},
+						yAxis: {
+							format: (v: number) => {
+								if (v < 0) return '';
+								if (v >= 1000000000) return (v / 1000000000).toFixed(0) + 'B';
+								if (v >= 1000000) return (v / 1000000).toFixed(0) + 'M';
+								if (v >= 1000) return (v / 1000).toFixed(0) + 'K';
+								return v.toLocaleString();
+							}
+						}
+					}}
+					>
+						{#snippet tooltip()}
+							<Chart.Tooltip
+								labelFormatter={(v: Date) => v.getFullYear().toString()}
+								indicator="dot"
+							/>
+						{/snippet}
+						{#snippet marks({ series, getAreaProps })}
+							{#each series as s, i (s.key)}
+								<LinearGradient
+									stops={[
+										s.color ?? "",
+										"color-mix(in srgb, " + s.color + " 15%, transparent)",
+									]}
+									vertical
+								>
+									{#snippet children({ gradient })}
+										<Area {...getAreaProps(s, i)} fill={gradient} />
+									{/snippet}
+								</LinearGradient>
+							{/each}
+						{/snippet}
+					</AreaChart>
+				</Chart.Container>
+			{:else}
+				<div class="flex items-center justify-center h-64">
+					<p class="text-muted-foreground">Loading chart...</p>
+				</div>
+			{/if}
 		</CardContent>
 		<CardFooter>
 		</CardFooter>

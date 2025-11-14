@@ -1,6 +1,6 @@
 import type { Actions } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
+import { db, ensureUsersTable } from '$lib/server/db';
 import bcrypt from 'bcrypt';
 import { signToken } from '$lib/server/jwt.ts';
 import { z } from 'zod';
@@ -38,6 +38,8 @@ export const actions: Actions = {
 		}
 
 		try {
+			await ensureUsersTable();
+			
 			const user = await db
 				.selectFrom('users')
 				.selectAll()

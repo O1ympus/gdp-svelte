@@ -14,7 +14,7 @@
 		BookmarkIcon,
 		EllipsisIcon
 	} from '@lucide/svelte';
-	import { onMount } from 'svelte';
+	import { user } from '$lib/stores/user';
 	
 	let { Country, growthGDP, growthPopulation, growthTotal }: {
 		Country: string;
@@ -25,20 +25,50 @@
 	
 	let isSaved = $state(false);
 	let isLoading = $state(false);
+	let checkPromise: Promise<void> | null = null;
 	
 	async function checkIfSaved() {
-		try {
-			const response = await fetch('/saved');
-			if (response.ok) {
-				const data = await response.json();
-				isSaved = data.countries?.some((c: { country: string }) => c.country === Country) ?? false;
-			}
-		} catch (error) {
-			console.error('Failed to check saved status:', error);
+		if (!$user) {
+			isSaved = false;
+			return;
 		}
+		
+		if (checkPromise) {
+			return checkPromise;
+		}
+		
+		checkPromise = (async () => {
+			try {
+				const response = await fetch('/saved');
+				if (response.ok) {
+					const data = await response.json();
+					isSaved = data.countries?.some((c: { country: string }) => c.country === Country) ?? false;
+				} else if (response.status === 401) {
+					isSaved = false;
+				}
+			} catch (error) {
+			} finally {
+				checkPromise = null;
+			}
+		})();
+		
+		return checkPromise;
 	}
 	
+	$effect(() => {
+		if ($user) {
+			checkIfSaved();
+		} else {
+			isSaved = false;
+		}
+	});
+	
 	async function toggleSave() {
+		if (!$user) {
+			toast.error('Please log in to save countries');
+			return;
+		}
+		
 		if (isLoading) {
 			return;
 		}
@@ -128,10 +158,6 @@
 			isLoading = false;
 		}
 	}
-	
-	onMount(() => {
-		checkIfSaved();
-	});
 </script>
 
 <DropdownMenu>
@@ -156,7 +182,7 @@
 			</DropdownMenuItem>
 			<DropdownMenuItem
 				onSelect={toggleSave}
-				disabled={isLoading}
+				disabled={isLoading || !$user}
 			>
 				{#if isSaved}
 					<BookmarkCheckIcon class="mr-2 size-4" />

@@ -138,11 +138,17 @@
 		
 		isLoading = true;
 		
-		fetch('/compare')
+		const abortController = new AbortController();
+		
+		fetch('/compare', { signal: abortController.signal })
 			.then((res) => {
 				return res.json();
 			})
 			.then((allData) => {
+				if (abortController.signal.aborted) {
+					return;
+				}
+				
 				let dataset: any[] = [];
 				const metricLower = metric.toLowerCase();
 				
@@ -170,87 +176,97 @@
 				chartData = transformed;
 			})
 			.catch((error) => {
-				console.error('Error fetching comparison data:', error);
-				chartData = [];
+				if (error.name !== 'AbortError') {
+					console.error('Error fetching comparison data:', error);
+					chartData = [];
+				}
 			})
 			.finally(() => {
-				isLoading = false;
+				if (!abortController.signal.aborted) {
+					isLoading = false;
+				}
 			});
+		
+		return () => {
+			abortController.abort();
+		};
 	});
 	
 	const color1 = "#3b82f6";
 	const color2 = "#06b6d4";
 	
-	let chartConfig = $state<any>({});
-	let chartSeries = $state<any[]>([]);
-	let maxValue = $state(0);
-	let yScale = $state<any>(null);
+	function sanitizeKey(country: string): string {
+		let key = '';
+		for (let i = 0; i < country.length; i++) {
+			const char = country[i];
+			if ((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
+				key += char;
+			} else {
+				key += '_';
+			}
+		}
+		return key;
+	}
 	
-	$effect(() => {
+	const chartConfig = $derived.by(() => {
 		if (!firstCountry || !secondCountry) {
-			chartConfig = {
+			return {
 				country1: { label: "Country 1", color: color1 },
 				country2: { label: "Country 2", color: color2 }
 			};
-			chartSeries = [
+		}
+		
+		const key1 = sanitizeKey(firstCountry);
+		const key2 = sanitizeKey(secondCountry);
+		
+		const config: any = {};
+		config[key1] = { label: firstCountry, color: color1 };
+		config[key2] = { label: secondCountry, color: color2 };
+		return config;
+	});
+	
+	const chartSeries = $derived.by(() => {
+		if (!firstCountry || !secondCountry) {
+			return [
 				{ key: "country1", label: "Country 1", color: color1 },
 				{ key: "country2", label: "Country 2", color: color2 }
 			];
-		} else {
-			let key1 = '';
-			for (let i = 0; i < firstCountry.length; i++) {
-				const char = firstCountry[i];
-				if ((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
-					key1 += char;
-				} else {
-					key1 += '_';
-				}
-			}
-			
-			let key2 = '';
-			for (let i = 0; i < secondCountry.length; i++) {
-				const char = secondCountry[i];
-				if ((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
-					key2 += char;
-				} else {
-					key2 += '_';
-				}
-			}
-			
-			chartConfig = {};
-			chartConfig[key1] = { label: firstCountry, color: color1 };
-			chartConfig[key2] = { label: secondCountry, color: color2 };
-			
-			chartSeries = [
-				{ key: key1, label: firstCountry, color: color1 },
-				{ key: key2, label: secondCountry, color: color2 }
-			];
 		}
+		
+		const key1 = sanitizeKey(firstCountry);
+		const key2 = sanitizeKey(secondCountry);
+		
+		return [
+			{ key: key1, label: firstCountry, color: color1 },
+			{ key: key2, label: secondCountry, color: color2 }
+		];
 	});
 	
-	$effect(() => {
+	const maxValue = $derived.by(() => {
 		if (chartData.length === 0) {
-			maxValue = 0;
-		} else {
-			let currentMax = 0;
-			for (let i = 0; i < chartData.length; i++) {
-				const entry = chartData[i];
-				for (const key in entry) {
-					if (key !== 'date') {
-						const value = entry[key];
-						if (typeof value === 'number') {
-							if (value > currentMax) {
-								currentMax = value;
-							}
+			return 0;
+		}
+		
+		let currentMax = 0;
+		for (let i = 0; i < chartData.length; i++) {
+			const entry = chartData[i];
+			for (const key in entry) {
+				if (key !== 'date') {
+					const value = entry[key];
+					if (typeof value === 'number') {
+						if (value > currentMax) {
+							currentMax = value;
 						}
 					}
 				}
 			}
-			maxValue = currentMax;
 		}
-		
+		return currentMax;
+	});
+	
+	const yScale = $derived.by(() => {
 		const topValue = maxValue * 1.1;
-		yScale = scaleLinear().domain([0, topValue]);
+		return scaleLinear().domain([0, topValue]);
 	});
   </script>
   

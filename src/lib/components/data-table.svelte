@@ -102,7 +102,7 @@
 	<div class="flex items-center py-4">
 		<Input
 			placeholder="Filter countries..."
-			value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+			value={(table.getColumn("Country")?.getFilterValue() as string) ?? ""}
 			onchange={(e) => {
         table.getColumn("Country")?.setFilterValue(e.currentTarget.value);
       }}

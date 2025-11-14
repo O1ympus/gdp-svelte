@@ -1,6 +1,6 @@
 import type { Actions } from '@sveltejs/kit';
 import bcrypt from 'bcrypt';
-import { db } from '$lib/server/db';
+import { db, ensureUsersTable } from '$lib/server/db';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -57,6 +57,8 @@ export const actions: Actions = {
 		}
 
 		try {
+			await ensureUsersTable();
+			
 			const existingUser = await db
 				.selectFrom('users')
 				.select(['id'])

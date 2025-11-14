@@ -35,6 +35,16 @@ async function ensureTableExists() {
 	setupPromise = (async () => {
 		try {
 			await db.schema
+				.createTable('users')
+				.ifNotExists()
+				.addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
+				.addColumn('username', 'text', (col) => col.notNull())
+				.addColumn('email', 'text', (col) => col.notNull().unique())
+				.addColumn('password', 'text', (col) => col.notNull())
+				.addColumn('roles', 'text', (col) => col.notNull())
+				.execute();
+
+			await db.schema
 				.createTable('saved_countries')
 				.ifNotExists()
 				.addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
@@ -54,9 +64,9 @@ async function ensureTableExists() {
 				.unique()
 				.execute();
 			
-			console.log('Saved countries table ensured');
+			console.log('Database tables ensured');
 		} catch (error) {
-			console.error('Error ensuring saved_countries table:', error);
+			console.error('Error ensuring database tables:', error);
 			throw error;
 		}
 	})();
@@ -65,3 +75,7 @@ async function ensureTableExists() {
 }
 
 ensureTableExists().catch(console.error);
+
+export async function ensureUsersTable() {
+	await ensureTableExists();
+}
