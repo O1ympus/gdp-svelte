@@ -1,0 +1,6 @@
+{
+	"dialect": "sqlite",
+	"connectionString": "./users.db",
+	"output": "src/generated/db-types.ts",
+	"camelCase": true
+}
