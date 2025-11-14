@@ -27,14 +27,20 @@
 		isLoading = true;
 		error = null;
 		try {
-			const [savedResponse, summaryResponse] = await Promise.all([
-				fetch('/saved'),
-				fetch('/countries')
-			]);
+			const savedResponse = await fetch('/saved');
 			
 			if (savedResponse.ok) {
 				const savedData = await savedResponse.json();
-				const summaryData = summaryResponse.ok ? await summaryResponse.json() : null;
+				let summaryData = null;
+				
+				try {
+					const summaryResponse = await fetch('/countries');
+					if (summaryResponse.ok) {
+						summaryData = await summaryResponse.json();
+					}
+				} catch (err) {
+					console.error('Failed to fetch summary data:', err);
+				}
 				
 				const growthMap = new Map();
 				if (summaryData && Array.isArray(summaryData)) {

@@ -76,7 +76,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				}
 			}
 
-			console.log(`Country "${country}" saved for user ${payload.id}`);
 			return json({ success: true, message: 'Country saved' });
 		} catch (error: any) {
 			const errorMessage = error?.message || '';
@@ -101,7 +100,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				.where('country', '=', country)
 				.execute();
 
-			console.log(`Country "${country}" unsaved for user ${payload.id}`);
 			return json({ success: true, message: 'Country unsaved' });
 		} catch (error) {
 			console.error('Error unsaving country:', error);
@@ -153,7 +151,6 @@ export const GET: RequestHandler = async ({ cookies }) => {
 			}
 		}
 
-		console.log(`Fetched ${savedCountries.length} saved countries for user ${payload.id}`);
 		return json({ countries: savedCountries });
 	} catch (error: any) {
 		console.error('Error fetching saved countries:', error);

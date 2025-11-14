@@ -2,9 +2,14 @@
 	import DataTable from '$lib/components/data-table.svelte';
 	import { columns } from './columns.js';
 	
-	export let data: { summary: { Country: string; growth_gdp: number; growth_population: number; growth_total: number }[] };
+	let { data }: { data: { summary: { Country: string; growth_gdp: number; growth_population: number; growth_total: number }[] } } = $props();
 	
-	let sortedSummary = data.summary.sort((a, b) => b.growth_total - a.growth_total);
+	const sortedSummary = $derived.by(() => {
+		if (data.summary && Array.isArray(data.summary)) {
+			return [...data.summary].sort((a, b) => b.growth_total - a.growth_total);
+		}
+		return [];
+	});
 </script>
 
 <DataTable data={sortedSummary} {columns} />

@@ -4,18 +4,20 @@
 	import SingleCountryChart from '$lib/components/single-country-chart.svelte';
 	import SectionCards from '$lib/components/section-cards.svelte';
 	
-	export let data: {
-		countryGDP?: { Country: string; [year: string]: number | string } | undefined;
-		countryPopulation?: { Country: string; [year: string]: number | string } | undefined;
-		countrySummary?: {
-			Country: string;
-			growth_gdp: number | null;
-			growth_population: number | null;
-			growth_total: number | null;
+	let { data }: {
+		data: {
+			countryGDP?: { Country: string; [year: string]: number | string } | undefined;
+			countryPopulation?: { Country: string; [year: string]: number | string } | undefined;
+			countrySummary?: {
+				Country: string;
+				growth_gdp: number | null;
+				growth_population: number | null;
+				growth_total: number | null;
+			};
 		};
-	};
+	} = $props();
 	
-	$: cards = [
+	const cards = $derived.by(() => [
 		{
 			title: 'GDP Growth',
 			description: 'GDP Growth (%)',
@@ -40,9 +42,9 @@
 			trendingIcon: (data.countrySummary?.growth_total ?? 0) >= 0 ? 'up' : 'down',
 			footer: 'Compared to last year'
 		},
-	];
+	]);
 	
-	$: country = $page.params.country;
+	const country = $derived($page.params.country);
 	
 	let countryData = null;
 	
